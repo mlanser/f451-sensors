@@ -1,0 +1,14 @@
+{
+  "_output_dir": "/home/cabox/workspace",
+  "_template": "gh:cjolowicz/cookiecutter-hypermodern-python",
+  "author": "Martin Lanser",
+  "copyright_year": "2022",
+  "development_status": "Development Status :: 1 - Planning",
+  "email": "martinlanser@gmail.com",
+  "friendly_name": "f451 Sensors",
+  "github_user": "mlanser",
+  "license": "MIT",
+  "package_name": "f451_sensors",
+  "project_name": "f451-sensors",
+  "version": "0.0.0"
+}
