@@ -123,7 +123,7 @@ python-versions = ">=3.6.1"
 name = "charset-normalizer"
 version = "2.0.12"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.5.0"
 
@@ -374,7 +374,7 @@ license = ["ukkonen"]
 name = "idna"
 version = "3.3"
 description = "Internationalized Domain Names in Applications (IDNA)"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.5"
 
@@ -836,7 +836,7 @@ python-versions = ">=3.6"
 name = "requests"
 version = "2.28.0"
 description = "Python HTTP for Humans."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7, <4"
 
@@ -1258,7 +1258,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "f01ab54bc7e9d8d8ce0a5865d4be2e92aee8693e8d389c689bc1f35d9f383036"
+content-hash = "704f80ce2a7c5e6569ae72a937f5d775a00914831eab56c0d1ef87beba0a68b2"
 
 [metadata.files]
 alabaster = [
