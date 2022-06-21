@@ -17,10 +17,10 @@ from rich import print as rprint
 from rich import traceback
 from rich.rule import Rule
 
-import f451_comms.constants as const
+import f451_sensors.constants as const
+import f451_sensors.smart_sensor as smart_sensor
 from . import __app_name__
 from . import __version__
-from .smart_sensor import run_smart_sensor
 
 # =========================================================
 #          G L O B A L    V A R S   &   I N I T S
@@ -28,7 +28,7 @@ from .smart_sensor import run_smart_sensor
 traceback.install()  # Ensure 'pretty' tracebacks
 faker = Faker()  # Initialize 'Faker'
 
-_APP_NAME_: str = "f451 Communications Module"
+_APP_NAME_: str = "f451 Sensors Module"
 _APP_NORMALIZED_: str = re.sub(r"[^A-Z0-9]", "_", str(__app_name__).upper())
 _APP_DIR_: Path = Path(__file__).parent
 
@@ -44,9 +44,9 @@ _APP_ENV_SECRETS_: str = f"{_APP_NORMALIZED_}_SECRETS"
 #       secrets that should not go github), separately from 'safe' config
 #       values (i.e. info that is safe to share on github). But both types
 #       can also be stored in the same file.
-_APP_LOG_: str = "f451-comms.log"
-_APP_CONFIG_: str = "f451-comms.config.ini"
-_APP_SECRETS_: str = "f451-comms.secrets.ini"
+_APP_LOG_: str = "f451-sensors.log"
+_APP_CONFIG_: str = "f451-sensors.config.ini"
+_APP_SECRETS_: str = "f451-sensors.secrets.ini"
 
 
 # =========================================================
@@ -65,7 +65,7 @@ def init_cli_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(
         prog=__app_name__,
-        description=f"Send messages via 'f451 Communications' [v{__version__}] module",
+        description=f"Collect sensor data via 'f451 Sensors' [v{__version__}] module",
         epilog="NOTE: Only call a module if the corresponding service is installed",
     )
 
@@ -77,18 +77,11 @@ def init_cli_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("-d", "--debug", action="store_true", help="Run in debug mode")
     parser.add_argument(
-        "--channel",
+        "--sensor",
         action="store",
-        default=const.CHANNEL_ALL,
+        default=const.SENSOR_ALL,
         type=str,
-        help="Communications channel(s) to use",
-    )
-    parser.add_argument(
-        "--msg",
-        action="store",
-        default="Testing 'f451-comms' module -- <some random text>",
-        type=str,
-        help="Text to send",
+        help="Sensor(s) to use",
     )
     parser.add_argument(
         "--secrets",
@@ -212,82 +205,85 @@ def main(inArgs: Any = None) -> None:  # noqa: C901
 
     konsole.config(level=konsole.DEBUG if cliArgs.debug else konsole.ERROR)
 
-    # Initialize main Communications Module with 'config' and 'secrets' data
-    comms = Comms(
-        init_ini_parser(
-            [
-                (
-                    cliArgs.config
-                    or (
-                        os.environ.get(_APP_ENV_CONFIG_)
-                        or get_valid_location(_APP_CONFIG_)
-                    )
-                ),
-                (
-                    cliArgs.secrets
-                    or (
-                        os.environ.get(_APP_ENV_SECRETS_)
-                        or get_valid_location(_APP_SECRETS_)
-                    )
-                ),
-            ]
-        )
-    )
+    # # Initialize main Communications Module with 'config' and 'secrets' data
+    # comms = Comms(
+    #     init_ini_parser(
+    #         [
+    #             (
+    #                 cliArgs.config
+    #                 or (
+    #                     os.environ.get(_APP_ENV_CONFIG_)
+    #                     or get_valid_location(_APP_CONFIG_)
+    #                 )
+    #             ),
+    #             (
+    #                 cliArgs.secrets
+    #                 or (
+    #                     os.environ.get(_APP_ENV_SECRETS_)
+    #                     or get_valid_location(_APP_SECRETS_)
+    #                 )
+    #             ),
+    #         ]
+    #     )
+    # )
 
-    # Exit if invalid channel
-    availableChannels = (
-        comms.valid_channels
-        if cliArgs.channel == const.CHANNEL_ALL
-        else comms.process_channel_list(cliArgs.channel.split(const.DELIM_STD))
-    )
+    # # Exit if invalid channel
+    # availableChannels = (
+    #     comms.valid_channels
+    #     if cliArgs.channel == const.CHANNEL_ALL
+    #     else comms.process_channel_list(cliArgs.channel.split(const.DELIM_STD))
+    # )
 
-    if not comms.is_valid_channel(availableChannels):
-        rprint(f"ERROR: '{cliArgs.channel}' is not a valid communications channel!")
-        sys.exit(1)
+    # if not comms.is_valid_channel(availableChannels):
+    #     rprint(f"ERROR: '{cliArgs.channel}' is not a valid communications channel!")
+    #     sys.exit(1)
 
     # -----------------------
     # Run communication demos
     # -----------------------
     rprint(Rule())
+
+    rprint("Hello world!")
+
     # -----------------------
-    rprint("[bold black on white] - Available Channels - [/bold black on white]")
-    if comms.channels:
-        for key, val in comms.channels.items():  # type: ignore[union-attr]
-            rprint(f"{key:.<20.20}: {'ON' if val else 'OFF'}")
-    else:
-        rprint("There are no channels enabled!")
+    # rprint("[bold black on white] - Available Channels - [/bold black on white]")
+    # if comms.channels:
+    #     for key, val in comms.channels.items():  # type: ignore[union-attr]
+    #         rprint(f"{key:.<20.20}: {'ON' if val else 'OFF'}")
+    # else:
+    #     rprint("There are no channels enabled!")
     rprint(Rule())
 
-    # -----------------------
-    # - 1 - Broadcast message based on args
-    rprint(
-        f"[bold black on white] - Broadcast to {availableChannels} - [/bold black on white]"
-    )
-    try:
-        comms.send_message(cliArgs.msg, **{const.KWD_CHANNELS: availableChannels})
+    # # -----------------------
+    # # - 1 - Broadcast message based on args
+    # rprint(
+    #     f"[bold black on white] - Broadcast to {availableChannels} - [/bold black on white]"
+    # )
+    # try:
+    #     comms.send_message(cliArgs.msg, **{const.KWD_CHANNELS: availableChannels})
 
-    except (MissingAttributeError, CommunicationsError) as e:
-        rprint(e)
+    # except (MissingAttributeError, CommunicationsError) as e:
+    #     rprint(e)
 
-    # -----------------------
-    # - 2 - Send Email via Mailgun
-    if const.CHANNEL_MAILGUN in availableChannels:
-        send_test_msg_via_mailgun(comms, cliArgs.msg)
+    # # -----------------------
+    # # - 2 - Send Email via Mailgun
+    # if const.CHANNEL_MAILGUN in availableChannels:
+    #     send_test_msg_via_mailgun(comms, cliArgs.msg)
 
-    # -----------------------
-    # - 3 - Send messages via Slack
-    if const.CHANNEL_SLACK in availableChannels:
-        send_test_msg_via_slack(comms, cliArgs.msg)
+    # # -----------------------
+    # # - 3 - Send messages via Slack
+    # if const.CHANNEL_SLACK in availableChannels:
+    #     send_test_msg_via_slack(comms, cliArgs.msg)
 
-    # -----------------------
-    # - 4 - Send SMS via Twilio
-    if const.CHANNEL_TWILIO in availableChannels:
-        send_test_msg_via_twilio(comms, cliArgs.msg)
+    # # -----------------------
+    # # - 4 - Send SMS via Twilio
+    # if const.CHANNEL_TWILIO in availableChannels:
+    #     send_test_msg_via_twilio(comms, cliArgs.msg)
 
-    # -----------------------
-    # - 5 - Send tweets and DMs via Twitter
-    if const.CHANNEL_TWITTER in availableChannels:
-        send_test_msg_via_twitter(comms, cliArgs.msg)
+    # # -----------------------
+    # # - 5 - Send tweets and DMs via Twitter
+    # if const.CHANNEL_TWITTER in availableChannels:
+    #     send_test_msg_via_twitter(comms, cliArgs.msg)
 
     # -----------------------
     rprint(Rule())
@@ -298,12 +294,3 @@ def main(inArgs: Any = None) -> None:  # noqa: C901
 # =========================================================
 if __name__ == "__main__":
     main()  # pragma: no cover
-
-@click.command()
-@click.version_option()
-def main() -> None:
-    """f451 Sensors."""
-    run_smart_sensor()
-
-if __name__ == "__main__":
-    main(prog_name="f451-sensors")  # pragma: no cover
