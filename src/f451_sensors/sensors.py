@@ -33,11 +33,11 @@ _SRV_CONFIG_SCTN_: str = "f451_main"
 log = logging.getLogger()
 pp = pprint.PrettyPrinter(indent=4)
 
-# typeDefProvider = Union[Mailgun, Slack, Twilio, Twitter, None]
-# typeDefStringLists = Union[str, List[str], None]
-# typeDefChannelInfo = Union[
-#     ConfigParser, Dict[str, str], Dict[str, Any], List[str], None
-# ]
+typeDefProvider = Union[Chameleon, None]
+typeDefStringLists = Union[str, List[str], None]
+typeDefSensorInfo = Union[
+    ConfigParser, Dict[str, str], Dict[str, Any], List[str], None
+]
 typeDefSendMsgResponse = Union[List[sensor.Response], Any]
 
 
@@ -48,9 +48,9 @@ class Sensor(sensor.Sensor):
     """Main class for f451 Communications module.
 
     Use this main class as default interface to send messages to any of the
-    installed/enabled communications channels.
+    installed/enabled communications sensors.
 
-    All available channels and associated attributes (e.g. API keys, etc.) are
+    All available sensors and associated attributes (e.g. API keys, etc.) are
     defined during initialization of the class.
 
     Attributes:
@@ -60,103 +60,109 @@ class Sensor(sensor.Sensor):
     """
 
     def __init__(self, config: Any = None) -> None:
-        super().__init__(const.SRV_TYPE_MAIN, _SRV_PROVIDER_, _SRV_CONFIG_SCTN_)
+        super().__init__(const.SNSR_TYPE_MAIN, _SRV_PROVIDER_, _SRV_CONFIG_SCTN_)
 
         settings = utils.process_config(config, False)
 
-        self.default_channels = settings
-        self.channel_map = settings
-        self.channels = settings
+        self.default_sensors = settings
+        self.sensor_map = settings
+        self.sensors = settings
 
     @property
-    def channels(self) -> typeDefChannelInfo:
-        """Return 'channels' property."""
-        return self._channels
+    def sensors(self) -> typeDefSensorInfo:
+        """Return 'sensors' property."""
+        return self._sensors
 
-    @channels.setter
-    def channels(self, settings: ConfigParser) -> None:
-        """Set 'channels' property."""
-        self._channels = {
-            const.CHANNEL_MAILGUN: self._init_mailgun(settings),
-            const.CHANNEL_SLACK: self._init_slack(settings),
-            const.CHANNEL_TWILIO: self._init_twilio(settings),
-            const.CHANNEL_TWITTER: self._init_twitter(settings),
+    @sensors.setter
+    def sensors(self, settings: ConfigParser) -> None:
+        """Set 'sensors' property."""
+        self._sensors = {
+            const.SENSOR_TEMP: self._init_temperature(settings),
+            const.SENSOR_HUMID: self._init_humidity(settings),
+            const.SENSOR_WIND: self._init_wind(settings),
+            const.SENSOR_RAIN: self._init_rain(settings),
+            const.SENSOR_SPEED: self._init_speed(settings),
         }
 
     @property
-    def Mailgun(self) -> typeDefProvider:
-        """Return 'Mailgun' client."""
-        return self._channels[const.CHANNEL_MAILGUN]
+    def Temperature(self) -> typeDefProvider:
+        """Return 'Temperature' sensor client."""
+        return self._sensors[const.SENSOR_TEMP]
 
     @property
-    def Twilio(self) -> typeDefProvider:
-        """Return 'Twilio' client."""
-        return self._channels[const.CHANNEL_TWILIO]
+    def Humidity(self) -> typeDefProvider:
+        """Return 'Humidity' sensor client."""
+        return self._sensors[const.SENSOR_HUMID]
 
     @property
-    def Slack(self) -> typeDefProvider:
-        """Return 'Slack' client."""
-        return self._channels[const.CHANNEL_SLACK]
+    def Wind(self) -> typeDefProvider:
+        """Return 'Wind' sensor client."""
+        return self._sensors[const.SENSOR_WIND]
 
     @property
-    def Twitter(self) -> typeDefProvider:
-        """Return 'Twitter' client."""
-        return self._channels[const.CHANNEL_TWITTER]
+    def Rain(self) -> typeDefProvider:
+        """Return 'Rain' sensor client."""
+        return self._sensors[const.SENSOR_RAIN]
 
     @property
-    def valid_channels(self) -> List[str]:
+    def Speed(self) -> typeDefProvider:
+        """Return 'Speed' sensor client."""
+        return self._sensors[const.SENSOR_SPEED]
+
+    @property
+    def valid_sensors(self) -> List[str]:
         """Return 'senderName' property."""
-        return list(self._channels.keys())
+        return list(self._sensors.keys())
 
     @property
-    def channel_map(self) -> typeDefChannelInfo:
-        """Return 'channel_map' property."""
-        return self._channel_map
+    def sensor_map(self) -> typeDefSensorInfo:
+        """Return 'sensor_map' property."""
+        return self._sensor_map
 
-    @channel_map.setter
-    def channel_map(self, settings: ConfigParser) -> None:
-        """Set 'channel_map' property."""
-        self._channel_map = utils.process_key_value_map(
-            settings.get(const.CHANNEL_MAIN, const.KWD_CHANNEL_MAP, fallback="")
+    @sensor_map.setter
+    def sensor_map(self, settings: ConfigParser) -> None:
+        """Set 'sensor_map' property."""
+        self._sensor_map = utils.process_key_value_map(
+            settings.get(const.SENSOR_MAIN, const.KWD_SENSOR_MAP, fallback="")
         )
 
-    def is_valid_channel(self, inChannels: typeDefStringLists) -> bool:
-        """Check if communications channel is valid."""
-        tmpList = self._normalize_channel_list(inChannels)
+    def is_valid_sensor(self, inChannels: typeDefStringLists) -> bool:
+        """Check if communications sensor is valid."""
+        tmpList = self._normalize_sensor_list(inChannels)
         return (
-            all(self._verify_channel(ch, True) for ch in tmpList) if tmpList else False
+            all(self._verify_sensor(ch, True) for ch in tmpList) if tmpList else False
         )
 
-    def is_enabled_channel(self, inChannels: typeDefStringLists) -> bool:
-        """Check if communications channel is enabled."""
-        tmpList = self._normalize_channel_list(inChannels)
+    def is_enabled_sensor(self, inChannels: typeDefStringLists) -> bool:
+        """Check if communications sensor is enabled."""
+        tmpList = self._normalize_sensor_list(inChannels)
         return (
-            all(ch in self._channels and self._channels[ch] for ch in tmpList)
+            all(ch in self._sensors and self._sensors[ch] for ch in tmpList)
             if tmpList
             else False
         )
 
     @property
-    def default_channels(self) -> typeDefChannelInfo:
-        """Return 'default_channels' property."""
-        return self._default_channels
+    def default_sensors(self) -> typeDefSensorInfo:
+        """Return 'default_sensors' property."""
+        return self._default_sensors
 
-    @default_channels.setter
-    def default_channels(self, settings: ConfigParser) -> None:
-        """Set 'default_channels' property."""
-        self._default_channels = str(
-            settings.get(const.CHANNEL_MAIN, const.KWD_CHANNELS, fallback="")
+    @default_sensors.setter
+    def default_sensors(self, settings: ConfigParser) -> None:
+        """Set 'default_sensors' property."""
+        self._default_sensors = str(
+            settings.get(const.SENSOR_MAIN, const.KWD_SENSORS, fallback="")
         ).split(const.DELIM_STD)
 
-    def _verify_channel(self, chName: str, force: bool) -> bool:
+    def _verify_sensor(self, chName: str, force: bool) -> bool:
         return (
-            (chName != "" and (chName in self._channels or chName in self._channel_map))
+            (chName != "" and (chName in self._sensors or chName in self._sensor_map))
             if force
             else (chName != "")
         )
 
     @staticmethod
-    def _normalize_channel_list(inChannels: typeDefStringLists) -> List[str]:
+    def _normalize_sensor_list(inChannels: typeDefStringLists) -> List[str]:
         if inChannels:
             if isinstance(inChannels, str):
                 return inChannels.split(const.DELIM_STD)
@@ -168,103 +174,103 @@ class Sensor(sensor.Sensor):
     @staticmethod
     def _init_mailgun(settings: ConfigParser) -> typeDefProvider:
         """Initialize Mailgun client."""
-        if not settings.has_section(const.CHANNEL_MAILGUN):
+        if not settings.has_section(const.SENSOR_MAILGUN):
             return None
 
         fromName = settings.get(
-            const.CHANNEL_MAIN,
+            const.SENSOR_MAIN,
             const.KWD_FROM,
             fallback=settings.get(
-                const.CHANNEL_MAILGUN, const.KWD_FROM_NAME, fallback=""
+                const.SENSOR_MAILGUN, const.KWD_FROM_NAME, fallback=""
             ),
         )
 
         defaultTo = settings.get(
-            const.CHANNEL_MAIN,
+            const.SENSOR_MAIN,
             const.KWD_TO,
             fallback=settings.get(
-                const.CHANNEL_MAILGUN, const.KWD_TO_EMAIL, fallback=""
+                const.SENSOR_MAILGUN, const.KWD_TO_EMAIL, fallback=""
             ),
         )
 
         return Mailgun(
-            apiKey=settings.get(const.CHANNEL_MAILGUN, const.KWD_PRIV_KEY, fallback=""),
+            apiKey=settings.get(const.SENSOR_MAILGUN, const.KWD_PRIV_KEY, fallback=""),
             fromDomain=settings.get(
-                const.CHANNEL_MAILGUN, const.KWD_FROM_DOMAIN, fallback=""
+                const.SENSOR_MAILGUN, const.KWD_FROM_DOMAIN, fallback=""
             ),
             from_name=fromName,
             to_email=defaultTo,
-            subject=settings.get(const.CHANNEL_MAILGUN, const.KWD_SUBJECT, fallback=""),
-            tags=settings.get(const.CHANNEL_MAILGUN, const.KWD_TAGS, fallback=""),
+            subject=settings.get(const.SENSOR_MAILGUN, const.KWD_SUBJECT, fallback=""),
+            tags=settings.get(const.SENSOR_MAILGUN, const.KWD_TAGS, fallback=""),
             tracking=settings.get(
-                const.CHANNEL_MAILGUN, const.KWD_TRACKING, fallback=""
+                const.SENSOR_MAILGUN, const.KWD_TRACKING, fallback=""
             ),
             testmode=settings.get(
-                const.CHANNEL_MAILGUN, const.KWD_TESTMODE, fallback=""
+                const.SENSOR_MAILGUN, const.KWD_TESTMODE, fallback=""
             ),
         )
 
     @staticmethod
     def _init_slack(settings: ConfigParser) -> typeDefProvider:
         """Initialize Slack client."""
-        if not settings.has_section(const.CHANNEL_SLACK):
+        if not settings.has_section(const.SENSOR_SLACK):
             return None
 
         fromSlack = settings.get(
-            const.CHANNEL_MAIN,
+            const.SENSOR_MAIN,
             const.KWD_FROM,
             fallback=settings.get(
-                const.CHANNEL_SLACK, const.KWD_FROM_SLACK, fallback=""
+                const.SENSOR_SLACK, const.KWD_FROM_SLACK, fallback=""
             ),
         )
 
         defaultChannel = settings.get(
-            const.CHANNEL_SLACK, const.KWD_TO_CHANNEL, fallback=""
+            const.SENSOR_SLACK, const.KWD_TO_SENSOR, fallback=""
         )
 
         return Slack(
             authToken=settings.get(
-                const.CHANNEL_SLACK, const.KWD_AUTH_TOKEN, fallback=""
+                const.SENSOR_SLACK, const.KWD_AUTH_TOKEN, fallback=""
             ),
             signingSecret=settings.get(
-                const.CHANNEL_SLACK, const.KWD_SIGN_SECRET, fallback=""
+                const.SENSOR_SLACK, const.KWD_SIGN_SECRET, fallback=""
             ),
             appToken=settings.get(
-                const.CHANNEL_SLACK, const.KWD_APP_TOKEN, fallback=""
+                const.SENSOR_SLACK, const.KWD_APP_TOKEN, fallback=""
             ),
-            to_channel=defaultChannel,
+            to_sensor=defaultChannel,
             from_slack=fromSlack,
             icon_emoji=settings.get(
-                const.CHANNEL_SLACK, const.KWD_ICON_EMOJI, fallback=""
+                const.SENSOR_SLACK, const.KWD_ICON_EMOJI, fallback=""
             ),
         )
 
     @staticmethod
     def _init_twilio(settings: ConfigParser) -> typeDefProvider:
         """Initialize Twilio client."""
-        if not settings.has_section(const.CHANNEL_TWILIO):
+        if not settings.has_section(const.SENSOR_TWILIO):
             return None
 
         fromPhone = settings.get(
-            const.CHANNEL_MAIN,
+            const.SENSOR_MAIN,
             const.KWD_FROM,
             fallback=settings.get(
-                const.CHANNEL_TWILIO, const.KWD_FROM_PHONE, fallback=""
+                const.SENSOR_TWILIO, const.KWD_FROM_PHONE, fallback=""
             ),
         )
 
         defaultTo = settings.get(
-            const.CHANNEL_MAIN,
+            const.SENSOR_MAIN,
             const.KWD_TO,
             fallback=settings.get(
-                const.CHANNEL_TWILIO, const.KWD_TO_PHONE, fallback=""
+                const.SENSOR_TWILIO, const.KWD_TO_PHONE, fallback=""
             ),
         )
 
         return Twilio(
-            acctSID=settings.get(const.CHANNEL_TWILIO, const.KWD_ACCT_SID, fallback=""),
+            acctSID=settings.get(const.SENSOR_TWILIO, const.KWD_ACCT_SID, fallback=""),
             authToken=settings.get(
-                const.CHANNEL_TWILIO, const.KWD_AUTH_TOKEN, fallback=""
+                const.SENSOR_TWILIO, const.KWD_AUTH_TOKEN, fallback=""
             ),
             from_phone=fromPhone,
             to_phone=defaultTo,
@@ -273,48 +279,48 @@ class Sensor(sensor.Sensor):
     @staticmethod
     def _init_twitter(settings: ConfigParser) -> typeDefProvider:
         """Initialize Twitter client."""
-        if not settings.has_section(const.CHANNEL_TWITTER):
+        if not settings.has_section(const.SENSOR_TWITTER):
             return None
 
         defaultTo = settings.get(
-            const.CHANNEL_MAIN,
+            const.SENSOR_MAIN,
             const.KWD_TO,
             fallback=settings.get(
-                const.CHANNEL_TWITTER, const.KWD_TO_TWITTER, fallback=""
+                const.SENSOR_TWITTER, const.KWD_TO_TWITTER, fallback=""
             ),
         )
 
         return Twitter(
-            usrKey=settings.get(const.CHANNEL_TWITTER, const.KWD_USER_KEY, fallback=""),
+            usrKey=settings.get(const.SENSOR_TWITTER, const.KWD_USER_KEY, fallback=""),
             usrSecret=settings.get(
-                const.CHANNEL_TWITTER, const.KWD_USER_SECRET, fallback=""
+                const.SENSOR_TWITTER, const.KWD_USER_SECRET, fallback=""
             ),
             authToken=settings.get(
-                const.CHANNEL_TWITTER, const.KWD_AUTH_TOKEN, fallback=""
+                const.SENSOR_TWITTER, const.KWD_AUTH_TOKEN, fallback=""
             ),
             authSecret=settings.get(
-                const.CHANNEL_TWITTER, const.KWD_AUTH_SECRET, fallback=""
+                const.SENSOR_TWITTER, const.KWD_AUTH_SECRET, fallback=""
             ),
             to_twitter=defaultTo,
-            tags=settings.get(const.CHANNEL_TWITTER, const.KWD_TAGS, fallback=""),
+            tags=settings.get(const.SENSOR_TWITTER, const.KWD_TAGS, fallback=""),
         )
 
-    def process_channel_list(
+    def process_sensor_list(
         self, inList: typeDefStringLists, strict: bool = False
     ) -> List[str]:
-        """Process list of channel names and convert them to list of strings.
+        """Process list of sensor names and convert them to list of strings.
 
-        The purpose of this method is to process a list with one or more channel
+        The purpose of this method is to process a list with one or more sensor
         names and placing them into a list.
 
         Args:
             inList:
                 Single string or list with one or more strings
             strict:
-                If 'True' then include only valid and enabled channel names
+                If 'True' then include only valid and enabled sensor names
 
         Returns:
-            String with zero or more channel names
+            String with zero or more sensor names
         """
         tmpList = (
             inList
@@ -325,22 +331,22 @@ class Sensor(sensor.Sensor):
         return [
             ch
             for ch in [
-                self._channel_map[item] if item in self._channel_map else item
+                self._sensor_map[item] if item in self._sensor_map else item
                 for item in [
                     tmp.strip()
                     for tmp in tmpList
-                    if self._verify_channel(tmp.strip(), strict)
+                    if self._verify_sensor(tmp.strip(), strict)
                 ]
             ]
-            if self.is_enabled_channel(ch)
+            if self.is_enabled_sensor(ch)
         ]
 
     def send_message(self, msg: str, **kwargs: Any) -> typeDefSendMsgResponse:
-        """Send message to one or more channels.
+        """Send message to one or more sensors.
 
-        This method sends a given message to one or more channels at
-        the same time. The 'channels' keyword argument defines which
-        communication channels to use.
+        This method sends a given message to one or more sensors at
+        the same time. The 'sensors' keyword argument defines which
+        communication sensors to use.
 
         The keyword arguments can also include additional message data
         such as HTML for emails and Slack blocks.
@@ -359,17 +365,17 @@ class Sensor(sensor.Sensor):
         Raises:
             InvalidProviderError: Channel/service provider is not valid/active
         """
-        chList = kwargs.get(const.KWD_CHANNELS, self._default_channels)
-        channels = self.process_channel_list(inList=chList, strict=True)
+        chList = kwargs.get(const.KWD_SENSORS, self._default_sensors)
+        sensors = self.process_sensor_list(inList=chList, strict=True)
 
-        if not channels:
-            log.error(f"Invalid communication channel(s): {chList}")
-            raise InvalidProviderError("Invalid communication channel(s)).")
+        if not sensors:
+            log.error(f"Invalid communication sensor(s): {chList}")
+            raise InvalidProviderError("Invalid communication sensor(s)).")
 
         return [
-            self._channels[ch].send_message(msg, **kwargs)  # type: ignore[union-attr]
-            for ch in channels
-            if self._channels[ch]
+            self._sensors[ch].send_message(msg, **kwargs)  # type: ignore[union-attr]
+            for ch in sensors
+            if self._sensors[ch]
         ]
 
     def send_message_via_mailgun(
@@ -395,12 +401,12 @@ class Sensor(sensor.Sensor):
         Raises:
             InvalidProviderError: Mailgun service is not valid/active
         """
-        if self._channels[const.CHANNEL_MAILGUN]:
-            return self._channels[const.CHANNEL_MAILGUN].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
+        if self._sensors[const.SENSOR_MAILGUN]:
+            return self._sensors[const.SENSOR_MAILGUN].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
 
-        log.error(f"'{const.CHANNEL_MAILGUN}' is not a valid communication channel")
+        log.error(f"'{const.SENSOR_MAILGUN}' is not a valid communication sensor")
         raise InvalidProviderError(
-            f"'{const.CHANNEL_MAILGUN}' is not a valid communication channel."
+            f"'{const.SENSOR_MAILGUN}' is not a valid communication sensor."
         )
 
     def send_message_via_slack(self, msg: Any, **kwargs: Any) -> typeDefSendMsgResponse:
@@ -422,21 +428,21 @@ class Sensor(sensor.Sensor):
             across all 'send_message()' functions.
 
         Raises:
-            InvalidProviderError: Slack channel is not valid/active
+            InvalidProviderError: Slack sensor is not valid/active
         """
-        if self._channels[const.CHANNEL_SLACK]:
+        if self._sensors[const.SENSOR_SLACK]:
             if isinstance(msg, list):
-                return self._channels[const.CHANNEL_SLACK].send_message_with_blocks(  # type: ignore[union-attr]  # noqa: B950
+                return self._sensors[const.SENSOR_SLACK].send_message_with_blocks(  # type: ignore[union-attr]  # noqa: B950
                     msg, **kwargs
                 )
             else:
-                return self._channels[const.CHANNEL_SLACK].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
+                return self._sensors[const.SENSOR_SLACK].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
 
         log.error(
-            f"ERROR: '{const.CHANNEL_SLACK}' is not a valid communication channel"
+            f"ERROR: '{const.SENSOR_SLACK}' is not a valid communication sensor"
         )
         raise InvalidProviderError(
-            f"'{const.CHANNEL_SLACK}' is not a valid communication channel."
+            f"'{const.SENSOR_SLACK}' is not a valid communication sensor."
         )
 
     def send_message_via_twilio(
@@ -462,12 +468,12 @@ class Sensor(sensor.Sensor):
         Raises:
             InvalidProviderError: Twilio service is not valid/active
         """
-        if self._channels[const.CHANNEL_TWILIO]:
-            return self._channels[const.CHANNEL_TWILIO].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
+        if self._sensors[const.SENSOR_TWILIO]:
+            return self._sensors[const.SENSOR_TWILIO].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
 
-        log.error(f"'{const.CHANNEL_TWILIO}' is not a valid communication channel")
+        log.error(f"'{const.SENSOR_TWILIO}' is not a valid communication sensor")
         raise InvalidProviderError(
-            f"'{const.CHANNEL_TWILIO}' is not a valid communication channel."
+            f"'{const.SENSOR_TWILIO}' is not a valid communication sensor."
         )
 
     def send_message_via_twitter(
@@ -491,14 +497,14 @@ class Sensor(sensor.Sensor):
             across all 'send_message()' functions.
 
         Raises:
-            InvalidProviderError: Twitter channel is not valid/active
+            InvalidProviderError: Twitter sensor is not valid/active
         """
-        if self._channels[const.CHANNEL_TWITTER]:
-            return self._channels[const.CHANNEL_TWITTER].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
+        if self._sensors[const.SENSOR_TWITTER]:
+            return self._sensors[const.SENSOR_TWITTER].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
 
         log.error(
-            f"ERROR: '{const.CHANNEL_TWITTER}' is not a valid communication channel"
+            f"ERROR: '{const.SENSOR_TWITTER}' is not a valid communication sensor"
         )
         raise InvalidProviderError(
-            f"'{const.CHANNEL_TWITTER}' is not a valid communication channel."
+            f"'{const.SENSOR_TWITTER}' is not a valid communication sensor."
         )

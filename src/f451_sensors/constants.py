@@ -17,6 +17,8 @@ SENSOR_ALL: str = "all"
 SENSOR_MAIN: str = "f451_main"
 SENSOR_TEMP: str = "f451_temperature"
 SENSOR_HUMID: str = "f451_humidity"
+SENSOR_WIND: str = "f451_wind"
+SENSOR_RAIN: str = "f451_rain"
 SENSOR_SPEED: str = "f451_speed"
 
 KWD_ACCT_SID: str = "acct_sid"
