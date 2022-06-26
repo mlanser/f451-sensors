@@ -137,8 +137,8 @@ class Sensor(ABC):
         sensorType: str,
         sensorName: str,
         configSection: str,
-        mqttHost: str,
-        mqttTopic: str,
+        mqttHost: str = '',
+        mqttTopic: str = '',
     ) -> None:
         self._snsrType: str = sensorType
         self._snsrName: str = sensorName

@@ -20,15 +20,16 @@ from typing import List
 from typing import Union
 
 import f451_sensors.constants as const
-import f451_sensors.sensors.sensor as sensor
+import f451_sensors.providers.sensor as sensor
 import f451_sensors.utils as utils
 from f451_sensors.exceptions import InvalidSensorError
+from f451_sensors.providers.chameleon import Chameleon
 
 # =========================================================
 #          G L O B A L S   A N D   H E L P E R S
 # =========================================================
-_SRV_PROVIDER_: str = "Main"
-_SRV_CONFIG_SCTN_: str = "f451_main"
+SRV_PROVIDER: str = "Main"
+SRV_CONFIG_SCTN: str = "f451_main"
 
 log = logging.getLogger()
 pp = pprint.PrettyPrinter(indent=4)
@@ -44,14 +45,14 @@ typeDefSendMsgResponse = Union[List[sensor.Response], Any]
 # =========================================================
 #        M A I N   C L A S S   D E F I N I T I O N
 # =========================================================
-class Sensor(sensor.Sensor):
-    """Main class for f451 Communications module.
+class Sensors(sensor.Sensor):
+    """Main class for f451 Sensor module.
 
-    Use this main class as default interface to send messages to any of the
-    installed/enabled communications sensors.
+    Use this main class as default interface to collect data from
+    one or more sensors and then send/publish to some data store.
 
-    All available sensors and associated attributes (e.g. API keys, etc.) are
-    defined during initialization of the class.
+    All available sensors and associated attributes are defined
+    during initialization of the class.
 
     Attributes:
         config:
@@ -60,7 +61,7 @@ class Sensor(sensor.Sensor):
     """
 
     def __init__(self, config: Any = None) -> None:
-        super().__init__(const.SNSR_TYPE_MAIN, _SRV_PROVIDER_, _SRV_CONFIG_SCTN_)
+        super().__init__(const.SNSR_TYPE_MAIN, SRV_PROVIDER, SRV_CONFIG_SCTN)
 
         settings = utils.process_config(config, False)
 
@@ -172,146 +173,180 @@ class Sensor(sensor.Sensor):
         return []
 
     @staticmethod
-    def _init_mailgun(settings: ConfigParser) -> typeDefProvider:
-        """Initialize Mailgun client."""
-        if not settings.has_section(const.SENSOR_MAILGUN):
+    def _init_temperature(settings: ConfigParser) -> typeDefProvider:
+        """Initialize Temperature sensor client."""
+        if not settings.has_section(const.SENSOR_TEMP):
             return None
 
-        fromName = settings.get(
-            const.SENSOR_MAIN,
-            const.KWD_FROM,
-            fallback=settings.get(
-                const.SENSOR_MAILGUN, const.KWD_FROM_NAME, fallback=""
-            ),
-        )
-
-        defaultTo = settings.get(
-            const.SENSOR_MAIN,
-            const.KWD_TO,
-            fallback=settings.get(
-                const.SENSOR_MAILGUN, const.KWD_TO_EMAIL, fallback=""
-            ),
-        )
-
-        return Mailgun(
-            apiKey=settings.get(const.SENSOR_MAILGUN, const.KWD_PRIV_KEY, fallback=""),
-            fromDomain=settings.get(
-                const.SENSOR_MAILGUN, const.KWD_FROM_DOMAIN, fallback=""
-            ),
-            from_name=fromName,
-            to_email=defaultTo,
-            subject=settings.get(const.SENSOR_MAILGUN, const.KWD_SUBJECT, fallback=""),
-            tags=settings.get(const.SENSOR_MAILGUN, const.KWD_TAGS, fallback=""),
-            tracking=settings.get(
-                const.SENSOR_MAILGUN, const.KWD_TRACKING, fallback=""
-            ),
-            testmode=settings.get(
-                const.SENSOR_MAILGUN, const.KWD_TESTMODE, fallback=""
-            ),
-        )
+        # fromName = settings.get(
+        #     const.SENSOR_MAIN,
+        #     const.KWD_FROM,
+        #     fallback=settings.get(
+        #         const.SENSOR_MAILGUN, const.KWD_FROM_NAME, fallback=""
+        #     ),
+        # )
+        #
+        # defaultTo = settings.get(
+        #     const.SENSOR_MAIN,
+        #     const.KWD_TO,
+        #     fallback=settings.get(
+        #         const.SENSOR_MAILGUN, const.KWD_TO_EMAIL, fallback=""
+        #     ),
+        # )
+        #
+        # return Mailgun(
+        #     apiKey=settings.get(const.SENSOR_MAILGUN, const.KWD_PRIV_KEY, fallback=""),
+        #     fromDomain=settings.get(
+        #         const.SENSOR_MAILGUN, const.KWD_FROM_DOMAIN, fallback=""
+        #     ),
+        #     from_name=fromName,
+        #     to_email=defaultTo,
+        #     subject=settings.get(const.SENSOR_MAILGUN, const.KWD_SUBJECT, fallback=""),
+        #     tags=settings.get(const.SENSOR_MAILGUN, const.KWD_TAGS, fallback=""),
+        #     tracking=settings.get(
+        #         const.SENSOR_MAILGUN, const.KWD_TRACKING, fallback=""
+        #     ),
+        #     testmode=settings.get(
+        #         const.SENSOR_MAILGUN, const.KWD_TESTMODE, fallback=""
+        #     ),
+        # )
+        return None
 
     @staticmethod
-    def _init_slack(settings: ConfigParser) -> typeDefProvider:
-        """Initialize Slack client."""
-        if not settings.has_section(const.SENSOR_SLACK):
+    def _init_humidity(settings: ConfigParser) -> typeDefProvider:
+        """Initialize Humidity sensor client."""
+        if not settings.has_section(const.SENSOR_HUMID):
             return None
 
-        fromSlack = settings.get(
-            const.SENSOR_MAIN,
-            const.KWD_FROM,
-            fallback=settings.get(
-                const.SENSOR_SLACK, const.KWD_FROM_SLACK, fallback=""
-            ),
-        )
-
-        defaultChannel = settings.get(
-            const.SENSOR_SLACK, const.KWD_TO_SENSOR, fallback=""
-        )
-
-        return Slack(
-            authToken=settings.get(
-                const.SENSOR_SLACK, const.KWD_AUTH_TOKEN, fallback=""
-            ),
-            signingSecret=settings.get(
-                const.SENSOR_SLACK, const.KWD_SIGN_SECRET, fallback=""
-            ),
-            appToken=settings.get(
-                const.SENSOR_SLACK, const.KWD_APP_TOKEN, fallback=""
-            ),
-            to_sensor=defaultChannel,
-            from_slack=fromSlack,
-            icon_emoji=settings.get(
-                const.SENSOR_SLACK, const.KWD_ICON_EMOJI, fallback=""
-            ),
-        )
+        # fromSlack = settings.get(
+        #     const.SENSOR_MAIN,
+        #     const.KWD_FROM,
+        #     fallback=settings.get(
+        #         const.SENSOR_SLACK, const.KWD_FROM_SLACK, fallback=""
+        #     ),
+        # )
+        #
+        # defaultChannel = settings.get(
+        #     const.SENSOR_SLACK, const.KWD_TO_SENSOR, fallback=""
+        # )
+        #
+        # return Slack(
+        #     authToken=settings.get(
+        #         const.SENSOR_SLACK, const.KWD_AUTH_TOKEN, fallback=""
+        #     ),
+        #     signingSecret=settings.get(
+        #         const.SENSOR_SLACK, const.KWD_SIGN_SECRET, fallback=""
+        #     ),
+        #     appToken=settings.get(
+        #         const.SENSOR_SLACK, const.KWD_APP_TOKEN, fallback=""
+        #     ),
+        #     to_sensor=defaultChannel,
+        #     from_slack=fromSlack,
+        #     icon_emoji=settings.get(
+        #         const.SENSOR_SLACK, const.KWD_ICON_EMOJI, fallback=""
+        #     ),
+        # )
+        return None
 
     @staticmethod
-    def _init_twilio(settings: ConfigParser) -> typeDefProvider:
-        """Initialize Twilio client."""
-        if not settings.has_section(const.SENSOR_TWILIO):
+    def _init_wind(settings: ConfigParser) -> typeDefProvider:
+        """Initialize Wind sensor client."""
+        if not settings.has_section(const.SENSOR_WIND):
             return None
 
-        fromPhone = settings.get(
-            const.SENSOR_MAIN,
-            const.KWD_FROM,
-            fallback=settings.get(
-                const.SENSOR_TWILIO, const.KWD_FROM_PHONE, fallback=""
-            ),
-        )
-
-        defaultTo = settings.get(
-            const.SENSOR_MAIN,
-            const.KWD_TO,
-            fallback=settings.get(
-                const.SENSOR_TWILIO, const.KWD_TO_PHONE, fallback=""
-            ),
-        )
-
-        return Twilio(
-            acctSID=settings.get(const.SENSOR_TWILIO, const.KWD_ACCT_SID, fallback=""),
-            authToken=settings.get(
-                const.SENSOR_TWILIO, const.KWD_AUTH_TOKEN, fallback=""
-            ),
-            from_phone=fromPhone,
-            to_phone=defaultTo,
-        )
+        # fromPhone = settings.get(
+        #     const.SENSOR_MAIN,
+        #     const.KWD_FROM,
+        #     fallback=settings.get(
+        #         const.SENSOR_TWILIO, const.KWD_FROM_PHONE, fallback=""
+        #     ),
+        # )
+        #
+        # defaultTo = settings.get(
+        #     const.SENSOR_MAIN,
+        #     const.KWD_TO,
+        #     fallback=settings.get(
+        #         const.SENSOR_TWILIO, const.KWD_TO_PHONE, fallback=""
+        #     ),
+        # )
+        #
+        # return Twilio(
+        #     acctSID=settings.get(const.SENSOR_TWILIO, const.KWD_ACCT_SID, fallback=""),
+        #     authToken=settings.get(
+        #         const.SENSOR_TWILIO, const.KWD_AUTH_TOKEN, fallback=""
+        #     ),
+        #     from_phone=fromPhone,
+        #     to_phone=defaultTo,
+        # )
+        return None
 
     @staticmethod
-    def _init_twitter(settings: ConfigParser) -> typeDefProvider:
-        """Initialize Twitter client."""
-        if not settings.has_section(const.SENSOR_TWITTER):
+    def _init_rain(settings: ConfigParser) -> typeDefProvider:
+        """Initialize Rain sensor client."""
+        if not settings.has_section(const.SENSOR_RAIN):
             return None
 
-        defaultTo = settings.get(
-            const.SENSOR_MAIN,
-            const.KWD_TO,
-            fallback=settings.get(
-                const.SENSOR_TWITTER, const.KWD_TO_TWITTER, fallback=""
-            ),
-        )
+        # defaultTo = settings.get(
+        #     const.SENSOR_MAIN,
+        #     const.KWD_TO,
+        #     fallback=settings.get(
+        #         const.SENSOR_TWITTER, const.KWD_TO_TWITTER, fallback=""
+        #     ),
+        # )
+        #
+        # return Twitter(
+        #     usrKey=settings.get(const.SENSOR_TWITTER, const.KWD_USER_KEY, fallback=""),
+        #     usrSecret=settings.get(
+        #         const.SENSOR_TWITTER, const.KWD_USER_SECRET, fallback=""
+        #     ),
+        #     authToken=settings.get(
+        #         const.SENSOR_TWITTER, const.KWD_AUTH_TOKEN, fallback=""
+        #     ),
+        #     authSecret=settings.get(
+        #         const.SENSOR_TWITTER, const.KWD_AUTH_SECRET, fallback=""
+        #     ),
+        #     to_twitter=defaultTo,
+        #     tags=settings.get(const.SENSOR_TWITTER, const.KWD_TAGS, fallback=""),
+        # )
+        return None
 
-        return Twitter(
-            usrKey=settings.get(const.SENSOR_TWITTER, const.KWD_USER_KEY, fallback=""),
-            usrSecret=settings.get(
-                const.SENSOR_TWITTER, const.KWD_USER_SECRET, fallback=""
-            ),
-            authToken=settings.get(
-                const.SENSOR_TWITTER, const.KWD_AUTH_TOKEN, fallback=""
-            ),
-            authSecret=settings.get(
-                const.SENSOR_TWITTER, const.KWD_AUTH_SECRET, fallback=""
-            ),
-            to_twitter=defaultTo,
-            tags=settings.get(const.SENSOR_TWITTER, const.KWD_TAGS, fallback=""),
-        )
+    @staticmethod
+    def _init_speed(settings: ConfigParser) -> typeDefProvider:
+        """Initialize Speed sensor client."""
+        if not settings.has_section(const.SENSOR_SPEED):
+            return None
+
+        # defaultTo = settings.get(
+        #     const.SENSOR_MAIN,
+        #     const.KWD_TO,
+        #     fallback=settings.get(
+        #         const.SENSOR_TWITTER, const.KWD_TO_TWITTER, fallback=""
+        #     ),
+        # )
+        #
+        # return Twitter(
+        #     usrKey=settings.get(const.SENSOR_TWITTER, const.KWD_USER_KEY, fallback=""),
+        #     usrSecret=settings.get(
+        #         const.SENSOR_TWITTER, const.KWD_USER_SECRET, fallback=""
+        #     ),
+        #     authToken=settings.get(
+        #         const.SENSOR_TWITTER, const.KWD_AUTH_TOKEN, fallback=""
+        #     ),
+        #     authSecret=settings.get(
+        #         const.SENSOR_TWITTER, const.KWD_AUTH_SECRET, fallback=""
+        #     ),
+        #     to_twitter=defaultTo,
+        #     tags=settings.get(const.SENSOR_TWITTER, const.KWD_TAGS, fallback=""),
+        # )
+        return None
 
     def process_sensor_list(
         self, inList: typeDefStringLists, strict: bool = False
     ) -> List[str]:
-        """Process list of sensor names and convert them to list of strings.
+        """Process list of sensor names and convert to list of strings.
 
-        The purpose of this method is to process a list with one or more sensor
-        names and placing them into a list.
+        The purpose of this method is to process a list with one or
+        more sensor names and placing them into a list.
 
         Args:
             inList:
@@ -341,170 +376,178 @@ class Sensor(sensor.Sensor):
             if self.is_enabled_sensor(ch)
         ]
 
-    def send_message(self, msg: str, **kwargs: Any) -> typeDefSendMsgResponse:
-        """Send message to one or more sensors.
+    def collect_data(self, **kwargs: Any) -> Dict[str, Any]:
+        print("COLLECT DATA called")
+        return {'foo': "bar"}
 
-        This method sends a given message to one or more sensors at
-        the same time. The 'sensors' keyword argument defines which
-        communication sensors to use.
+    def publish_data(self, inDelay: int = 1, iterMax: int = 0, **kwargs: Any) -> int:
+        print("PUBLISH DATA called")
+        return 1
 
-        The keyword arguments can also include additional message data
-        such as HTML for emails and Slack blocks.
+    # def send_message(self, msg: str, **kwargs: Any) -> typeDefSendMsgResponse:
+    #     """Send message to one or more sensors.
+    #
+    #     This method sends a given message to one or more sensors at
+    #     the same time. The 'sensors' keyword argument defines which
+    #     communication sensors to use.
+    #
+    #     The keyword arguments can also include additional message data
+    #     such as HTML for emails and Slack blocks.
+    #
+    #     Args:
+    #         msg:
+    #             Simple/plain text version of message to be sent
+    #         kwargs:
+    #             Additional optional arguments
+    #
+    #     Returns:
+    #         List of 'response' records. We always return a list even though we
+    #         may only have a single item. This allows us to be consistent across
+    #         all 'send_message()' functions.
+    #
+    #     Raises:
+    #         InvalidProviderError: Channel/service provider is not valid/active
+    #     """
+    #     chList = kwargs.get(const.KWD_SENSORS, self._default_sensors)
+    #     sensors = self.process_sensor_list(inList=chList, strict=True)
+    #
+    #     if not sensors:
+    #         log.error(f"Invalid communication sensor(s): {chList}")
+    #         raise InvalidProviderError("Invalid communication sensor(s)).")
+    #
+    #     return [
+    #         self._sensors[ch].send_message(msg, **kwargs)  # type: ignore[union-attr]
+    #         for ch in sensors
+    #         if self._sensors[ch]
+    #     ]
 
-        Args:
-            msg:
-                Simple/plain text version of message to be sent
-            kwargs:
-                Additional optional arguments
+    # def send_message_via_mailgun(
+    #     self, msg: str, **kwargs: Any
+    # ) -> typeDefSendMsgResponse:
+    #     """Send email via Mailgun.
+    #
+    #     This method sends a given message via email using the Mailgun service
+    #     provider. The keyword arguments can also include additional message
+    #     data such as an HTML version of the message.
+    #
+    #     Args:
+    #         msg:
+    #             Simple/plain text version of message to be sent
+    #         kwargs:
+    #             Additional optional arguments
+    #
+    #     Returns:
+    #         List of 'response' records from email Mailgun service. We always return a list
+    #         even though we may only have a single item. This allows us to be consistent
+    #         across all 'send_message()' functions.
+    #
+    #     Raises:
+    #         InvalidProviderError: Mailgun service is not valid/active
+    #     """
+    #     if self._sensors[const.SENSOR_MAILGUN]:
+    #         return self._sensors[const.SENSOR_MAILGUN].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
+    #
+    #     log.error(f"'{const.SENSOR_MAILGUN}' is not a valid communication sensor")
+    #     raise InvalidProviderError(
+    #         f"'{const.SENSOR_MAILGUN}' is not a valid communication sensor."
+    #     )
 
-        Returns:
-            List of 'response' records. We always return a list even though we
-            may only have a single item. This allows us to be consistent across
-            all 'send_message()' functions.
+    # def send_message_via_slack(self, msg: Any, **kwargs: Any) -> typeDefSendMsgResponse:
+    #     """Send message via Slack.
+    #
+    #     This method sends a given message via Slack. The 'kwargs' arguments can
+    #     also include additional message data such Slack blocks.
+    #
+    #     Args:
+    #         msg:
+    #             simple/plain text version of message to be sent. The 'msg' argument
+    #             can also be a 'list' of Slack blocks.
+    #         kwargs:
+    #             Additional optional arguments
+    #
+    #     Returns:
+    #         List of 'response' records from Slack. We always return a list
+    #         even though we may only have a single item. This allows us to be consistent
+    #         across all 'send_message()' functions.
+    #
+    #     Raises:
+    #         InvalidProviderError: Slack sensor is not valid/active
+    #     """
+    #     if self._sensors[const.SENSOR_SLACK]:
+    #         if isinstance(msg, list):
+    #             return self._sensors[const.SENSOR_SLACK].send_message_with_blocks(  # type: ignore[union-attr]  # noqa: B950
+    #                 msg, **kwargs
+    #             )
+    #         else:
+    #             return self._sensors[const.SENSOR_SLACK].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
+    #
+    #     log.error(
+    #         f"ERROR: '{const.SENSOR_SLACK}' is not a valid communication sensor"
+    #     )
+    #     raise InvalidProviderError(
+    #         f"'{const.SENSOR_SLACK}' is not a valid communication sensor."
+    #     )
 
-        Raises:
-            InvalidProviderError: Channel/service provider is not valid/active
-        """
-        chList = kwargs.get(const.KWD_SENSORS, self._default_sensors)
-        sensors = self.process_sensor_list(inList=chList, strict=True)
+    # def send_message_via_twilio(
+    #     self, msg: str, **kwargs: Any
+    # ) -> typeDefSendMsgResponse:
+    #     """Send SMS via Twilio.
+    #
+    #     This method sends a given message via SMS (using Twilio) to one or
+    #     more recipients. The phone numbers of the recipients must be specified
+    #     in the 'to_phone' keyword argument.
+    #
+    #     Args:
+    #         msg:
+    #             Simple/plain text version of message to be sent
+    #         kwargs:
+    #             Additional optional arguments
+    #
+    #     Returns:
+    #         List of 'response' records from Twilio SMS service. We always return a list
+    #         even though we may only have a single item. This allows us to be consistent
+    #         across all 'send_message()' functions.
+    #
+    #     Raises:
+    #         InvalidProviderError: Twilio service is not valid/active
+    #     """
+    #     if self._sensors[const.SENSOR_TWILIO]:
+    #         return self._sensors[const.SENSOR_TWILIO].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
+    #
+    #     log.error(f"'{const.SENSOR_TWILIO}' is not a valid communication sensor")
+    #     raise InvalidProviderError(
+    #         f"'{const.SENSOR_TWILIO}' is not a valid communication sensor."
+    #     )
 
-        if not sensors:
-            log.error(f"Invalid communication sensor(s): {chList}")
-            raise InvalidProviderError("Invalid communication sensor(s)).")
-
-        return [
-            self._sensors[ch].send_message(msg, **kwargs)  # type: ignore[union-attr]
-            for ch in sensors
-            if self._sensors[ch]
-        ]
-
-    def send_message_via_mailgun(
-        self, msg: str, **kwargs: Any
-    ) -> typeDefSendMsgResponse:
-        """Send email via Mailgun.
-
-        This method sends a given message via email using the Mailgun service
-        provider. The keyword arguments can also include additional message
-        data such as an HTML version of the message.
-
-        Args:
-            msg:
-                Simple/plain text version of message to be sent
-            kwargs:
-                Additional optional arguments
-
-        Returns:
-            List of 'response' records from email Mailgun service. We always return a list
-            even though we may only have a single item. This allows us to be consistent
-            across all 'send_message()' functions.
-
-        Raises:
-            InvalidProviderError: Mailgun service is not valid/active
-        """
-        if self._sensors[const.SENSOR_MAILGUN]:
-            return self._sensors[const.SENSOR_MAILGUN].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
-
-        log.error(f"'{const.SENSOR_MAILGUN}' is not a valid communication sensor")
-        raise InvalidProviderError(
-            f"'{const.SENSOR_MAILGUN}' is not a valid communication sensor."
-        )
-
-    def send_message_via_slack(self, msg: Any, **kwargs: Any) -> typeDefSendMsgResponse:
-        """Send message via Slack.
-
-        This method sends a given message via Slack. The 'kwargs' arguments can
-        also include additional message data such Slack blocks.
-
-        Args:
-            msg:
-                simple/plain text version of message to be sent. The 'msg' argument
-                can also be a 'list' of Slack blocks.
-            kwargs:
-                Additional optional arguments
-
-        Returns:
-            List of 'response' records from Slack. We always return a list
-            even though we may only have a single item. This allows us to be consistent
-            across all 'send_message()' functions.
-
-        Raises:
-            InvalidProviderError: Slack sensor is not valid/active
-        """
-        if self._sensors[const.SENSOR_SLACK]:
-            if isinstance(msg, list):
-                return self._sensors[const.SENSOR_SLACK].send_message_with_blocks(  # type: ignore[union-attr]  # noqa: B950
-                    msg, **kwargs
-                )
-            else:
-                return self._sensors[const.SENSOR_SLACK].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
-
-        log.error(
-            f"ERROR: '{const.SENSOR_SLACK}' is not a valid communication sensor"
-        )
-        raise InvalidProviderError(
-            f"'{const.SENSOR_SLACK}' is not a valid communication sensor."
-        )
-
-    def send_message_via_twilio(
-        self, msg: str, **kwargs: Any
-    ) -> typeDefSendMsgResponse:
-        """Send SMS via Twilio.
-
-        This method sends a given message via SMS (using Twilio) to one or
-        more recipients. The phone numbers of the recipients must be specified
-        in the 'to_phone' keyword argument.
-
-        Args:
-            msg:
-                Simple/plain text version of message to be sent
-            kwargs:
-                Additional optional arguments
-
-        Returns:
-            List of 'response' records from Twilio SMS service. We always return a list
-            even though we may only have a single item. This allows us to be consistent
-            across all 'send_message()' functions.
-
-        Raises:
-            InvalidProviderError: Twilio service is not valid/active
-        """
-        if self._sensors[const.SENSOR_TWILIO]:
-            return self._sensors[const.SENSOR_TWILIO].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
-
-        log.error(f"'{const.SENSOR_TWILIO}' is not a valid communication sensor")
-        raise InvalidProviderError(
-            f"'{const.SENSOR_TWILIO}' is not a valid communication sensor."
-        )
-
-    def send_message_via_twitter(
-        self, msg: str, **kwargs: Any
-    ) -> typeDefSendMsgResponse:
-        """Send message via Twitter.
-
-        This method sends a given message via Twitter either as 'status update' or as
-        DM to a specific recipient. If the latter, then the recipient must be specified
-        in the 'kwargs' arguments.
-
-        Args:
-            msg:
-                simple/plain text version of message to be sent
-            kwargs:
-                Additional optional arguments
-
-        Returns:
-            List of 'response' records from Twitter. We always return a list
-            even though we may only have a single item. This allows us to be consistent
-            across all 'send_message()' functions.
-
-        Raises:
-            InvalidProviderError: Twitter sensor is not valid/active
-        """
-        if self._sensors[const.SENSOR_TWITTER]:
-            return self._sensors[const.SENSOR_TWITTER].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
-
-        log.error(
-            f"ERROR: '{const.SENSOR_TWITTER}' is not a valid communication sensor"
-        )
-        raise InvalidProviderError(
-            f"'{const.SENSOR_TWITTER}' is not a valid communication sensor."
-        )
+    # def send_message_via_twitter(
+    #     self, msg: str, **kwargs: Any
+    # ) -> typeDefSendMsgResponse:
+    #     """Send message via Twitter.
+    #
+    #     This method sends a given message via Twitter either as 'status update' or as
+    #     DM to a specific recipient. If the latter, then the recipient must be specified
+    #     in the 'kwargs' arguments.
+    #
+    #     Args:
+    #         msg:
+    #             simple/plain text version of message to be sent
+    #         kwargs:
+    #             Additional optional arguments
+    #
+    #     Returns:
+    #         List of 'response' records from Twitter. We always return a list
+    #         even though we may only have a single item. This allows us to be consistent
+    #         across all 'send_message()' functions.
+    #
+    #     Raises:
+    #         InvalidProviderError: Twitter sensor is not valid/active
+    #     """
+    #     if self._sensors[const.SENSOR_TWITTER]:
+    #         return self._sensors[const.SENSOR_TWITTER].send_message(msg, **kwargs)  # type: ignore[union-attr]  # noqa: B950
+    #
+    #     log.error(
+    #         f"ERROR: '{const.SENSOR_TWITTER}' is not a valid communication sensor"
+    #     )
+    #     raise InvalidProviderError(
+    #         f"'{const.SENSOR_TWITTER}' is not a valid communication sensor."
+    #     )

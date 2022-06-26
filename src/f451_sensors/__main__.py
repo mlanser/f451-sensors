@@ -18,7 +18,11 @@ from rich import traceback
 from rich.rule import Rule
 
 import f451_sensors.constants as const
-import f451_sensors.smart_sensor as smart_sensor
+from f451_sensors.sensors import Sensors
+from f451_sensors.exceptions import MissingAttributeError
+from f451_sensors.exceptions import InvalidAttributeError
+from f451_sensors.exceptions import SensorAccessError
+from f451_sensors.exceptions import SensorConnectionError
 from . import __app_name__
 from . import __version__
 
@@ -52,6 +56,23 @@ _APP_SECRETS_: str = "f451-sensors.secrets.ini"
 # =========================================================
 #              H E L P E R   F U N C T I O N S
 # =========================================================
+def collect_temperature_data(sensors: Sensors, maxRetry: int = 5, waitRetry: int = 1) -> Dict[str, Any]:
+    """Collect temperature data."""
+    rprint(Rule())
+    rprint("[bold black on white] - Collect temperature data - [/bold black on white]")
+
+    data = None
+    attempts = 0
+    try:
+        while not data and attempts < maxRetry:
+            data = sensors.collect_temperature_data()
+            attempts += 1
+            rprint(f"{attempts =} - {data =}")
+
+    except (MissingAttributeError, SensorAccessError) as e:
+        rprint(e)
+
+    return data
 
 
 def init_cli_parser() -> argparse.ArgumentParser:
@@ -152,13 +173,7 @@ def get_valid_location(inFName: str) -> str:
         f"/etc/{__app_name__}/{cleanFName}",
     ]
 
-    outFName = ""
-    for item in defaultLocations:
-        if Path(item).exists():
-            outFName = str(item)
-            break
-
-    return outFName
+    return next((str(item) for item in defaultLocations if Path(item).exists()), "")
 
 
 # =========================================================
@@ -172,7 +187,7 @@ def main(inArgs: Any = None) -> None:  # noqa: C901
 
     Note:
         - Application will exit with error level 1 if invalid communications
-          channels are included
+          sensors are included
 
         - Application will exit with error level 0 if either no arguments are
           entered via CLI, or if arguments '-V' or '--version' are used. No message
@@ -205,87 +220,87 @@ def main(inArgs: Any = None) -> None:  # noqa: C901
 
     konsole.config(level=konsole.DEBUG if cliArgs.debug else konsole.ERROR)
 
-    # # Initialize main Communications Module with 'config' and 'secrets' data
-    # comms = Comms(
-    #     init_ini_parser(
-    #         [
-    #             (
-    #                 cliArgs.config
-    #                 or (
-    #                     os.environ.get(_APP_ENV_CONFIG_)
-    #                     or get_valid_location(_APP_CONFIG_)
-    #                 )
-    #             ),
-    #             (
-    #                 cliArgs.secrets
-    #                 or (
-    #                     os.environ.get(_APP_ENV_SECRETS_)
-    #                     or get_valid_location(_APP_SECRETS_)
-    #                 )
-    #             ),
-    #         ]
-    #     )
-    # )
+    # Initialize main Communications Module with 'config' and 'secrets' data
+    sensors = Sensors(
+        init_ini_parser(
+            [
+                (
+                    cliArgs.config
+                    or (
+                        os.environ.get(_APP_ENV_CONFIG_)
+                        or get_valid_location(_APP_CONFIG_)
+                    )
+                ),
+                (
+                    cliArgs.secrets
+                    or (
+                        os.environ.get(_APP_ENV_SECRETS_)
+                        or get_valid_location(_APP_SECRETS_)
+                    )
+                ),
+            ]
+        )
+    )
 
-    # # Exit if invalid channel
-    # availableChannels = (
-    #     comms.valid_channels
-    #     if cliArgs.channel == const.CHANNEL_ALL
-    #     else comms.process_channel_list(cliArgs.channel.split(const.DELIM_STD))
-    # )
+    # Exit if invalid sensor
+    availableSensors = (
+        sensors.valid_sensors
+        if cliArgs.sensor == const.SENSOR_ALL
+        else sensors.process_sensor_list(cliArgs.sensor.split(const.DELIM_STD))
+    )
 
-    # if not comms.is_valid_channel(availableChannels):
-    #     rprint(f"ERROR: '{cliArgs.channel}' is not a valid communications channel!")
-    #     sys.exit(1)
+    if not sensors.is_valid_sensor(availableSensors):
+        rprint(f"ERROR: '{cliArgs.sensor}' is not a valid sensor!")
+        sys.exit(1)
 
     # -----------------------
-    # Run communication demos
+    # Run sensor demos
     # -----------------------
     rprint(Rule())
-
-    rprint("Hello world!")
+    data = []
 
     # -----------------------
-    # rprint("[bold black on white] - Available Channels - [/bold black on white]")
-    # if comms.channels:
-    #     for key, val in comms.channels.items():  # type: ignore[union-attr]
-    #         rprint(f"{key:.<20.20}: {'ON' if val else 'OFF'}")
-    # else:
-    #     rprint("There are no channels enabled!")
+    rprint("[bold black on white] - Available Sensors - [/bold black on white]")
+    if sensors.sensors:
+        for key, val in sensors.sensors.items():  # type: ignore[union-attr]
+            rprint(f"{key:.<20.20}: {'ON' if val else 'OFF'}")
+    else:
+        rprint("There are no sensors enabled!")
     rprint(Rule())
 
     # # -----------------------
     # # - 1 - Broadcast message based on args
     # rprint(
-    #     f"[bold black on white] - Broadcast to {availableChannels} - [/bold black on white]"
+    #     f"[bold black on white] - Broadcast to {availableSensors} - [/bold black on white]"
     # )
     # try:
-    #     comms.send_message(cliArgs.msg, **{const.KWD_CHANNELS: availableChannels})
-
+    #     sensors.send_message(cliArgs.msg, **{const.KWD_SENSORS: availableSensors})
+    #
     # except (MissingAttributeError, CommunicationsError) as e:
     #     rprint(e)
 
-    # # -----------------------
-    # # - 2 - Send Email via Mailgun
-    # if const.CHANNEL_MAILGUN in availableChannels:
-    #     send_test_msg_via_mailgun(comms, cliArgs.msg)
+    # -----------------------
+    # - 2 - Collect data from
+    if const.SENSOR_TEMP in availableSensors:
+        data.append(collect_temperature_data(sensors))
 
     # # -----------------------
     # # - 3 - Send messages via Slack
-    # if const.CHANNEL_SLACK in availableChannels:
-    #     send_test_msg_via_slack(comms, cliArgs.msg)
+    # if const.SENSOR_SLACK in availableSensors:
+    #     send_test_msg_via_slack(sensors, cliArgs.msg)
 
     # # -----------------------
     # # - 4 - Send SMS via Twilio
-    # if const.CHANNEL_TWILIO in availableChannels:
-    #     send_test_msg_via_twilio(comms, cliArgs.msg)
+    # if const.SENSOR_TWILIO in availableSensors:
+    #     send_test_msg_via_twilio(sensors, cliArgs.msg)
 
     # # -----------------------
     # # - 5 - Send tweets and DMs via Twitter
-    # if const.CHANNEL_TWITTER in availableChannels:
-    #     send_test_msg_via_twitter(comms, cliArgs.msg)
+    # if const.SENSOR_TWITTER in availableSensors:
+    #     send_test_msg_via_twitter(sensors, cliArgs.msg)
 
     # -----------------------
+    rprint("Hello world!")
     rprint(Rule())
 
 

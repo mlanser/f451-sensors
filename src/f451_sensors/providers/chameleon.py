@@ -20,6 +20,11 @@ mqttc.connect(MQTT_BROKER_URL)
 # Init faker our fake data provider
 fake = Faker()
 
+
+class Chameleon():
+    pass
+
+
 # Infinite loop of fake data sent to the Broker
 def run_smart_sensor(inDelay: int = 1, iterMax: int = 0) -> None:
     delay = max(min(inDelay, MAX_DELAY), MIN_DELAY)

@@ -9,6 +9,7 @@ for attributes in .ini files.
 # =========================================================
 DELIM_STD: str = "|"
 DELIM_VAL: str = ":"
+EMPTY_STR: str = ""
 
 # =========================================================
 #    K E Y W O R D S   F O R   C O N F I G   F I L E S
