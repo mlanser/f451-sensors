@@ -38,6 +38,7 @@ flake8-rst-docstrings = ">=0.2.5"
 furo = ">=2021.11.12"
 isort = ">=5.10.1"
 mypy = ">=0.930"
+nox = "^2022.1.7"
 pep8-naming = ">=0.12.1"
 pre-commit = ">=2.16.0"
 pre-commit-hooks = ">=4.1.0"
@@ -77,6 +78,7 @@ source = ["f451_sensors", "tests"]
 [tool.coverage.report]
 show_missing = true
 fail_under = 100
+# skip_empty = true
 
 [tool.isort]
 profile = "black"
@@ -96,6 +98,12 @@ exclude = [
     'conftest\.py',     # Don't run mypy on test files
     'test_.*\.py',
 ]
+[[tool.mypy.overrides]]
+module = [
+    "requests",
+    "paho.*",
+]
+ignore_missing_imports = true
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
